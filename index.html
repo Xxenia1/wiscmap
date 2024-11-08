@@ -1,1 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaflet Map with Building Popups</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <style>
+      #map {
+      height: 600px;
+    }
 
+    .popup-tabs {
+      font-family: Arial, sans-serif;
+      width: 250px;
+    }
+
+    .tab-buttons {
+      display: flex;
+      border-bottom: 1px solid #ff0505;
+      margin-bottom: 10px;
+    }
+
+    .tab-link {
+      flex: 1;
+      padding: 8px;
+      background-color: #ff0505;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .tab-link.active {
+      background-color: #fff;
+      border-bottom: 2px solid #007bff;
+    }
+
+    .tab-content {
+      display: none;
+      font-size: 14px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .legend {
+      background:white;
+      padding: 10px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .legend-icon{
+      width: 16px;
+      height: 16px;
+      vertical-align: middle;
+    }
+
+    /*design for survey button*/
+    .addRecordBtn {
+            position: absolute;
+            z-index: 10;
+            top: 10px;
+            right: 10px;
+            background-color: #fe4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+    }
+    .addRecordBtn:hover {
+            background-color: #ce566c;
+    }
+
+    .leaflet-control-locate {
+      background: white;
+      padding: 5px;
+      cursor: pointer;
+      font-size: 18px;
+      text-align: center;
+      width: 35px;
+      height: 35px;
+      line-height: 35px;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+    }
+    .leaflet-control-locate:hover {
+      background: #f4f4f4;
+    }
+
+    
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="locate-button" onclick="locateUser()">Locate Me</div>
+  <script>
+    // Initialize the Leaflet map
+    var map = L.map('map').setView([43.07492672, -89.39593367], 20);  // Coordinates for Madison, WI
+
+    // Add a base tile layer from OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    //define a custom icon for buildings
+    var buildingIcon = L.icon({
+      iconUrl: 'school.png',
+      iconSize: [25,25],
+      iconAnchor: [16,25],
+      popupAnchor: [0,-25]
+    });
+
+    // Function to switch tabs
+    function openTab(event, tabId) {
+      const tabContent = event.currentTarget.closest('.popup-tabs').querySelectorAll('.tab-content');
+      const tabLinks = event.currentTarget.closest('.tab-buttons').querySelectorAll('.tab-link');
+
+      tabContent.forEach(content => content.classList.remove('active'));
+      tabLinks.forEach(link => link.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    
+    // Fetch the building data from the API
+    fetch('https://map.wisc.edu/api/v1/buildings')
+      .then(response => response.json())
+      .then(data => {
+        // Convert the API response to GeoJSON format
+        const geojsonData = {
+          "type": "FeatureCollection",
+          "features": data.map(item => ({
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [item.latlng[1], item.latlng[0]]  // Longitude, Latitude
+            },
+            "properties": {
+              "name": item.name,
+              "address": item.street_address,
+              "object_type": item.object_type,
+              "departments": item.departments
+            }
+          }))
+        };
+
+        // Add the GeoJSON data to the map with popups
+        L.geoJSON(geojsonData, {
+          onEachFeature: function (feature, layer) {
+            // Create custom popup content with Info and Departments tabs
+            let popupContent = `
+              <div class="popup-tabs">
+                <div class="tab-buttons">
+                  <button onclick="openTab(event, 'info-${feature.properties.name}')" class="tab-link active">Info</button>
+                  <button onclick="openTab(event, 'departments-${feature.properties.name}')" class="tab-link">Departments</button>
+                </div>
+                <div id="info-${feature.properties.name}" class="tab-content active">
+                  <b>Name:</b> ${feature.properties.name}<br>
+                  <b>Address:</b> ${feature.properties.address}<br>
+                  <b>Object Type:</b> ${feature.properties.object_type || 'N/A'}
+                </div>
+                <div id="departments-${feature.properties.name}" class="tab-content">
+                  <b>Departments:</b><br>
+                  ${feature.properties.departments && feature.properties.departments.length > 0
+                    ? feature.properties.departments.map(dep => `<li>${dep.name}</li>`).join('')
+                    : 'No departments available'}
+                </div>
+              </div>
+            `;
+
+            // Bind popup with the formatted content
+            layer.bindPopup(popupContent);
+          },
+          style: function (feature) {
+            return { color: 'blue' };
+          }
+        }).addTo(map);
+      })
+      .catch(error => {
+        console.error('Error fetching the building data:', error);
+      });
+
+
+      // Add a custom Locate Control
+    var locateControl = L.control({position: 'topleft'});
+
+    locateControl.onAdd = function () {
+      var div = L.DomUtil.create('div', 'leaflet-control-locate');
+      div.innerHTML = "📍";
+      div.title = "Locate Me";
+      div.onclick = locateUser;
+      return div;
+    };
+
+    locateControl.addTo(map);
+
+    // Locate function to zoom to user's location
+    function locateUser() {
+      map.locate({ setView: true, maxZoom: 16 });
+    }
+
+    // Event listeners for location events
+    map.on('locationfound', function(e) {
+      L.marker(e.latlng).addTo(map)
+        .bindPopup("You are here").openPopup();
+    });
+
+    map.on('locationerror', function() {
+      alert("Location access denied.");
+    });
+      
+  </script>
+</body>
+</html>
