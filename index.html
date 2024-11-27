@@ -3,139 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leaflet Map with Building Popups</title>
+  <title>UW Reseach Cores Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css">
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <style>
-    html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  #map {
-    height: 100%;
-    width: 100%;
-  }
-  .popup-tabs {
-      font-family: Arial, sans-serif;
-      width: 250px;
-    }
-
-    .tab-buttons {
-      display: flex;
-      border-bottom: 1px solid #ff0505;
-      margin-bottom: 10px;
-    }
-
-    .tab-link {
-      flex: 1;
-      padding: 8px;
-      background-color: #ff0505;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    .tab-link.active {
-      background-color: #fff;
-      border-bottom: 2px solid #007bff;
-    }
-
-    .tab-content {
-      display: none;
-      font-size: 14px;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
+  <style>   
     
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <script>
-    // Initialize the Leaflet map
-    var map = L.map('map').setView([43.0731, -89.4012], 14);  // Coordinates for Madison, WI
-
-    // Add a base tile layer from OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // Function to switch tabs
-    function openTab(event, tabId) {
-      const tabContent = event.currentTarget.closest('.popup-tabs').querySelectorAll('.tab-content');
-      const tabLinks = event.currentTarget.closest('.tab-buttons').querySelectorAll('.tab-link');
-
-      tabContent.forEach(content => content.classList.remove('active'));
-      tabLinks.forEach(link => link.classList.remove('active'));
-
-      document.getElementById(tabId).classList.add('active');
-      event.currentTarget.classList.add('active');
-    }
-
-
-    // Fetch the building data from the API
-    fetch('https://map.wisc.edu/api/v1/buildings')
-      .then(response => response.json())
-      .then(data => {
-        // Convert the API response to GeoJSON format
-        const geojsonData = {
-          "type": "FeatureCollection",
-          "features": data.map(item => ({
-            "type": "Feature",
-            "geometry": {
-              "type": "Point",
-              "coordinates": [item.latlng[1], item.latlng[0]]  // Longitude, Latitude
-            },
-            "properties": {
-              "name": item.name,
-              "address": item.street_address,
-              "object_type": item.object_type,
-              "departments": item.departments
-            }
-          }))
-        };
-
-        // Add the GeoJSON data to the map with popups
-        L.geoJSON(geojsonData, {
-          onEachFeature: function (feature, layer) {
-            // Create custom popup content with Info and Departments tabs
-            let popupContent = `
-              <div class="popup-tabs">
-                <div class="tab-buttons">
-                  <button onclick="openTab(event, 'info-${feature.properties.name}')" class="tab-link active">Info</button>
-                  <button onclick="openTab(event, 'departments-${feature.properties.name}')" class="tab-link">Departments</button>
-                </div>
-                <div id="info-${feature.properties.name}" class="tab-content active">
-                  <b>Name:</b> ${feature.properties.name}<br>
-                  <b>Address:</b> ${feature.properties.address}<br>
-                  <b>Object Type:</b> ${feature.properties.object_type || 'N/A'}
-                </div>
-                <div id="departments-${feature.properties.name}" class="tab-content">
-                  <b>Departments:</b><br>
-                  ${feature.properties.departments && feature.properties.departments.length > 0
-                    ? feature.properties.departments.map(dep => `<li>${dep.name}</li>`).join('')
-                    : 'No departments available'}
-                </div>
-              </div>
-            `;
-
-            // Bind popup with building name, address, and thumbnail if available
-            layer.bindPopup(popupContent);
-          },
-          style: function (feature) {
-            return { color: 'blue' };
-          }
-        }).addTo(map);
-      })
-      .catch(error => {
-        console.error('Error fetching the building data:', error);
-      });
-  </script>
+  <script type="text/javascript" src="js/main.js"></script>
 </body>
 </html>
 
