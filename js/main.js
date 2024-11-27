@@ -40,7 +40,8 @@ fetch('https://map.wisc.edu/api/v1/buildings')
           "name": item.name,
           "address": item.street_address,
           "object_type": item.object_type,
-          "departments": item.departments
+          "departments": item.departments,
+          "thumbnail": item.images.thumb
         }
       }))
     };
@@ -58,7 +59,10 @@ fetch('https://map.wisc.edu/api/v1/buildings')
             <div id="info-${feature.properties.name}" class="tab-content active">
               <b>Name:</b> ${feature.properties.name}<br>
               <b>Address:</b> ${feature.properties.address}<br>
-              <b>Object Type:</b> ${feature.properties.object_type || 'N/A'}
+              <b>Object Type:</b> ${feature.properties.object_type || 'N/A'}<br>
+              ${feature.properties.thumbnail 
+                ? `<img src="${feature.properties.thumbnail}" alt="${feature.properties.name}" style="width: 100%; max-height: 150px; object-fit: cover; margin-top: 10px;">` 
+                : '<i>No image available</i>'}
             </div>
             <div id="departments-${feature.properties.name}" class="tab-content">
               <b>Departments:</b><br>
