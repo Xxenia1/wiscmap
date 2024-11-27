@@ -48,6 +48,10 @@ fetch('https://map.wisc.edu/api/v1/buildings')
 
     // Add the GeoJSON data to the map with popups
     L.geoJSON(geojsonData, {
+        //add filter only show building
+        filter: function (feature) {
+            return feature.properties.object_type === "building" || feature.properties.object_type === "natural_area";
+          },
       onEachFeature: function (feature, layer) {
         // Create custom popup content with Info and Departments tabs
         let popupContent = `
